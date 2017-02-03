@@ -38,6 +38,14 @@
 #define ENABLE_BATTERY 1 //disable battery monitoring
 #define ENABLE_BACKLIGHT 1 //disable automatic back-light
 
+//assume ARM processors can handle 4 channels & extended note range
+#ifdef __arm__
+#undef NUM_CHANNELS
+#undef EXTENDED_NOTE_RANGE
+#define NUM_CHANNELS 4
+#define EXTENDED_NOTE_RANGE 1
+#endif
+
 //IT'S STRONGLY ADVISED TO LEAVE THE FOLLOWING SETTINGS ALONE
 
 //defaults values of settings which can be adjusted on each Gamebuino using settings.hex

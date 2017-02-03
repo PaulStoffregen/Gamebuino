@@ -290,7 +290,11 @@ int8_t Gamebuino::menu(const char* const* items, uint8_t length) {
 					display.cursorX = 3;
 					display.cursorY = currentY + display.fontHeight * activeItem;
 				}
+				#ifdef __AVR__
 				display.println((const __FlashStringHelper*)pgm_read_word(items+i));
+				#else
+				display.println(items[i]);
+				#endif
 			}
 
 			//display.fillRect(0, currentY + 3 + 8 * activeItem, 2, 2, BLACK);

@@ -58,6 +58,7 @@ void Sound::begin() {
 		command(CMD_INSTRUMENT, 0, 0, i); //set the default instrument to square wave
 	}
 	
+  #if defined(__AVR__)
 	analogWrite(3, 1); //lazy version to get the right register settings for PWM (hem)
 	TCCR2B = (TCCR2B & B11111000) | 1; //set timer 2 prescaler to 1 -> 30kHz PWM on pin 3
 
@@ -72,6 +73,12 @@ void Sound::begin() {
 	TCCR1B |= (1 << CS10); // 1 prescaler
 	TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
 	interrupts(); // enable all interrupts
+  #elif defined(__arm__) && defined(TEENSYDUINO)
+	analogWriteFrequency(3, 30000);
+	analogWrite(3, 1);
+	static IntervalTimer timer;
+	timer.begin(Sound::generateOutput, 66.66667); // 15 kHz
+  #endif
 #endif
 }
 
@@ -121,7 +128,11 @@ void Sound::updateTrack(uint8_t channel){
 		//Serial.println(patternID, HEX);
 		data >>= 8;
 		patternPitch[channel] = data;
+		#ifdef __AVR__
 		playPattern((const uint16_t*)pgm_read_word(&(patternSet[channel][patternID])), channel);
+		#else
+		playPattern(patternSet[channel][patternID], channel);
+		#endif
 		trackCursor[channel] ++;
 	}
 #endif
@@ -275,7 +286,11 @@ void Sound::command(uint8_t cmd, uint8_t X, int8_t Y, uint8_t i){
 		noteVolume[i] = X;
 		break;
 	case CMD_INSTRUMENT: //instrument
+		#ifdef __AVR__
 		instrumentData[i] = (uint16_t*)pgm_read_word(&(instrumentSet[i][X]));
+		#else
+		instrumentData[i] = instrumentSet[i][X];
+		#endif
 		instrumentLength[i] = pgm_read_word(&(instrumentData[i][0])) & 0x00FF; //8 LSB
 		instrumentLength[i] *= prescaler;
 		instrumentLooping[i] = min((pgm_read_word(&(instrumentData[i][0])) >> 8), instrumentLength[i]); //8 MSB - check that the loop is shorter than the instrument length
@@ -453,9 +468,11 @@ void Sound::setChannelHalfPeriod(uint8_t channel, uint8_t halfPeriod) {
 }
 
 #if(NUM_CHANNELS > 0)
+#ifdef __AVR__
 ISR(TIMER1_COMPA_vect){ // timer compare interrupt service routine
 	Sound::generateOutput();
 }
+#endif
 #endif
 
 
@@ -561,7 +578,11 @@ void Sound::updateOutput() {
 		output += _chanOutput[3];
 	}
 	#endif
+	#if defined(__AVR__)
 	OCR2B = output; //60x faster than analogOutput() !
+	#elif defined(__arm__) && defined(TEENSYDUINO)
+	analogWrite(3, output);
+	#endif
 #endif
 }
 
